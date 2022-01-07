@@ -11,8 +11,8 @@ import (
 )
 
 type Server struct {
-	r *mux.Router
-	s *http.Server
+	R *mux.Router
+	S *http.Server
 	Options
 }
 
@@ -21,6 +21,7 @@ var Assembly map[string]func(s *Server)
 type Options struct {
 	Log          *logrus.Logger
 	Addr         string
+	Mode         common.Mode
 	CaCert       string
 	CaKey        string
 	AssemblyName string
@@ -28,7 +29,7 @@ type Options struct {
 
 func DefaultServer(opts Options) *Server {
 	server := NewServer(opts)
-	server.r.Use(server.LoggingMiddlewareBuilder())
+	server.R.Use(server.LoggingMiddlewareBuilder())
 	server.Map("/hello", Hello)
 	if opts.AssemblyName == "" {
 		server.AssemblyName = "default"
@@ -56,7 +57,7 @@ func NewServer(opts Options) *Server {
 		Handler:  cors,
 		ErrorLog: log.New(opts.Log.Writer(), "[BSC] ", 0), // cc https://github.com/sirupsen/logrus/issues/1063
 	}
-	return &Server{r: r, s: s, Options: opts}
+	return &Server{R: r, S: s, Options: opts}
 }
 
 func RegisterAssembly(name string, f func(s *Server)) {
@@ -76,8 +77,8 @@ func (s *Server) Start() {
 }
 
 func (s *Server) Shutdown(ctx context.Context) {
-	if s.s != nil {
-		err := s.s.Shutdown(ctx)
+	if s.S != nil {
+		err := s.S.Shutdown(ctx)
 		if err != nil {
 			s.Log.Error("[BSC] shutdown failed")
 			common.Exit(common.SocketShutdownFailed)
@@ -90,10 +91,10 @@ func (s *Server) Map(path string, f func(http.ResponseWriter,
 	*http.Request), method ...string) *Server {
 	if len(method) == 1 {
 		s.Log.Info("[BSC] add route path [" + method[0] + "] -> " + path)
-		s.r.HandleFunc(path, f).Methods(method[0])
+		s.R.HandleFunc(path, f).Methods(method[0])
 	} else {
 		s.Log.Info("[BSC] add route path [ALL] -> " + path)
-		s.r.HandleFunc(path, f)
+		s.R.HandleFunc(path, f)
 	}
 	return s
 }
