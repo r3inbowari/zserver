@@ -1,4 +1,4 @@
-module zserver
+module github.com/r3inbowari/zserver
 
 go 1.17
 
